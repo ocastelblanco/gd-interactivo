@@ -1,0 +1,9 @@
+.contenedor {
+  display: flex;
+  justify-content: center;
+  .tabla {
+    margin-top: 0.5rem;
+    flex: 1 1 auto;
+    max-width: 1020px;
+  }
+}

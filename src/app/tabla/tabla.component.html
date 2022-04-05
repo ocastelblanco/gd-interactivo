@@ -1,0 +1,216 @@
+<div [ngClass]="materia"
+     class="gd-tabla">
+  <div class="header">
+    <h2 class="titulo">
+      Planificación de la unidad
+      <em>{{tema}}</em>
+    </h2>
+    <div class="botonera">
+      <a href="http://sites.aulaplaneta.com/guia_didactica/Planificacion_MT_05_02_LL.xlsx"
+         target="_blank"
+         download
+         mat-stroked-button
+         matTooltip="Descargar en formato Excel"
+         color="primary">
+        <fa-icon [icon]="faFileExcel"
+                 size="lg">
+        </fa-icon>
+        <mat-icon>download</mat-icon>
+      </a>
+      <a href="http://sites.aulaplaneta.com/guia_didactica/Planificacion_MT_05_02_LL.pdf"
+         target="_blank"
+         download
+         mat-stroked-button
+         matTooltip="Descargar en formato PDF"
+         color="primary">
+        <fa-icon [icon]="faFilePdf"
+                 size="lg">
+        </fa-icon>
+        <mat-icon>download</mat-icon>
+      </a>
+    </div>
+  </div>
+  <div *ngIf="data.length > 0"
+       class="contenedor-tabla mat-elevation-z4">
+    <table mat-table
+           [dataSource]="dataSource"
+           multiTemplateDataRows
+           matSort
+           class="tabla">
+      <ng-container matColumnDef="{{column}}"
+                    *ngFor="let column of columnasPrincipal;index as numCol">
+        <th mat-header-cell
+            *matHeaderCellDef>
+          <div class="titulo-hd-principal"
+               cdkOverlayOrigin
+               #filtroColumna="cdkOverlayOrigin">
+            <span>{{nombres[numCol]}}</span>
+            <div *ngIf="numCol > 0 && (filtroActivo === 0 || filtroActivo === numCol)"
+                 (click)="abrirFiltro(numCol)"
+                 matRipple
+                 [class.activado]="esFiltroActivo(numCol)"
+                 class="boton-filtro">
+              <mat-icon>filter_alt</mat-icon>
+            </div>
+          </div>
+          <ng-template cdkConnectedOverlay
+                       cdkConnectedOverlayBackdropClass="overlay-filtro"
+                       (backdropClick)="abreFiltroColumna[numCol] = false"
+                       [cdkConnectedOverlayHasBackdrop]="true"
+                       [cdkConnectedOverlayOrigin]="filtroColumna"
+                       [cdkConnectedOverlayOpen]="abreFiltroColumna[numCol]">
+            <div class="filtro-overlay mat-elevation-z4">
+              <div class="titulo-lista-filtros">
+                <h3>Filtrar por {{nombres[numCol]}}</h3>
+                <mat-checkbox class="example-margin"
+                              [checked]="todosFiltros(numCol)"
+                              [indeterminate]="algunosFiltros(numCol)"
+                              (change)="selTodosFiltros(numCol,$event.checked)">
+                  Todos
+                </mat-checkbox>
+              </div>
+              <div class="lista-filtros">
+                <mat-selection-list>
+                  <ng-container *ngFor="let filtro of filtros[numCol].filtros; index as numFila">
+                    <mat-list-option (selectedChange)="filtro.activo = $event"
+                                     [selected]="filtro.activo"
+                                     checkboxPosition="before">
+                      {{filtro.nombre === '' ? '[Vacío]' : filtro.nombre === 'X' ? '✓' : filtro.nombre}}
+                    </mat-list-option>
+                  </ng-container>
+                </mat-selection-list>
+              </div>
+              <div class="acciones-lista-filtros">
+                <button (click)="aplicaFiltros(numCol)"
+                        mat-raised-button>
+                  Cancelar
+                </button>
+                <button (click)="aplicaFiltros(numCol,true)"
+                        mat-raised-button
+                        color="primary">
+                  Aceptar
+                </button>
+              </div>
+            </div>
+          </ng-template>
+        </th>
+        <td mat-cell
+            *matCellDef="let element">
+          <mat-icon *ngIf="column === 'plegar'"
+                    (click)="pliegaFila(element)"
+                    class="plegar">
+            {{expandedElement === element ? 'expand_less' : 'expand_more'}}
+          </mat-icon>
+          <div *ngIf="column !== 'plegar' && column !== 'itinerarioBasico' && numCol !== 2">
+            {{element[column]}}
+          </div>
+          <div class="itinerario-basico"
+               *ngIf="column === 'itinerarioBasico'">
+            <mat-icon class="ok"
+                      *ngIf="element[column] !== ''">
+              done
+            </mat-icon>
+          </div>
+          <a [href]="element['smartlink']"
+             target="_blank"
+             class="titulo-recurso"
+             *ngIf="column !== 'plegar' && numCol === 2 && element['smartlink'].length > 4">
+            <span>{{element[column]}}</span>
+            <mat-icon>open_in_new</mat-icon>
+          </a>
+          <div *ngIf="column !== 'plegar' && numCol === 2 && element['smartlink'].length < 5"
+               class="titulo-recurso">
+            {{element[column]}}
+          </div>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="expandedDetail">
+        <td mat-cell
+            *matCellDef="let element; let numFila = dataIndex;"
+            [attr.colspan]="columnasPrincipal.length">
+          <div class="detalle"
+               [@detailExpand]="element == expandedElement ? 'expanded' : 'collapsed'">
+            <table cdkOverlayOrigin
+                   id="tabla-detalle"
+                   #tablaDetalle="cdkOverlayOrigin"
+                   mat-table
+                   [dataSource]="[element]"
+                   class="tabla-detalle mat-elevation-z4">
+              <ng-container matColumnDef="{{column}}"
+                            *ngFor="let column of columnasDetalle; index as i">
+                <th mat-header-cell
+                    class="encabezado-tabla-detalle"
+                    *matHeaderCellDef>
+                  <div class="titulo-tabla-detalle"
+                       *ngIf="element[column].split(';').length > 1 else noChips"
+                       (click)="abrirDetalle(numFila,columnasDetalle[i],element[column])"
+                       [matTooltip]="'Ver tabla de ' + nombres[i + columnasPrincipal.length]">
+                    <span>{{nombres[i + columnasPrincipal.length]}}</span>
+                    <mat-icon>arrow_upward</mat-icon>
+                  </div>
+                  <ng-template #noChips>
+                    {{nombres[i + columnasPrincipal.length]}}
+                  </ng-template>
+                </th>
+                <td mat-cell
+                    *matCellDef="let element">
+                  <mat-chip-list *ngIf="element[column] && element[column].length > 0">
+                    <mat-basic-chip *ngFor="let chip of element[column].split(';')">
+                      {{chip}}
+                    </mat-basic-chip>
+                  </mat-chip-list>
+                </td>
+              </ng-container>
+              <tr mat-header-row
+                  *matHeaderRowDef="columnasDetalle"></tr>
+              <tr mat-row
+                  *matRowDef="let row; columns: columnasDetalle"></tr>
+            </table>
+            <ng-template cdkConnectedOverlay
+                         (backdropClick)="abreDetalle[numFila] = false"
+                         [cdkConnectedOverlayHasBackdrop]="true"
+                         [cdkConnectedOverlayOrigin]="tablaDetalle"
+                         [cdkConnectedOverlayOpen]="abreDetalle[numFila]">
+              <div (click)="abreDetalle[numFila] = false"
+                   [ngStyle]="{'width': anchoTablaDetalle}"
+                   [ngClass]="materia"
+                   class="overlay">
+                <h4 class="titulo-overlay">{{infoDetalle.titulo}}</h4>
+                <table class="tabla-overlay">
+                  <thead>
+                    <tr>
+                      <th *ngFor="let enc of infoDetalle.encabezados">{{enc}}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let data of infoDetalle.data">
+                      <td *ngFor="let dato of data">{{dato}}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-template>
+          </div>
+        </td>
+      </ng-container>
+      <tr mat-header-row
+          *matHeaderRowDef="columnasPrincipal; sticky: true">
+      </tr>
+      <tr mat-row
+          *matRowDef="let element; columns: columnasPrincipal"
+          class="fila-principal">
+      </tr>
+      <tr mat-row
+          *matRowDef="let row; columns: ['expandedDetail']"
+          class="fila-detalle">
+      </tr>
+    </table>
+    <mat-paginator #paginator
+                   [length]="data.length"
+                   [pageIndex]="0"
+                   [pageSize]="10"
+                   [pageSizeOptions]="[5, 10, 20, 50, 100]"
+                   aria-label="Seleccionar página">
+    </mat-paginator>
+  </div>
+</div>
